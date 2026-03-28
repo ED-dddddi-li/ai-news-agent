@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 资讯 Agent</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #ffffff; color: #1d1d1f; min-height: 100vh; }
+
+  /* 顶部导航 */
+  .nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid #f0f0f0; padding: 0 48px; height: 52px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px; }
+  .nav-logo span { color: #6e6e73; font-weight: 400; }
+  .nav-tags { display: flex; gap: 8px; }
+  .nav-tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; background: #f5f5f7; color: #6e6e73; }
+
+  /* 英雄区 */
+  .hero { text-align: center; padding: 80px 24px 60px; max-width: 680px; margin: 0 auto; }
+  .hero-label { font-size: 13px; font-weight: 500; color: #6e6e73; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px; }
+  .hero h1 { font-size: 52px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; color: #1d1d1f; margin-bottom: 16px; }
+  .hero h1 em { font-style: normal; background: linear-gradient(135deg, #007aff, #5856d6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 17px; color: #6e6e73; line-height: 1.6; }
+
+  /* API 配置 */
+  .keys-section { max-width: 640px; margin: 0 auto 48px; padding: 0 24px; }
+  .keys-toggle { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .keys-toggle-left { display: flex; align-items: center; gap: 10px; }
+  .keys-toggle-left .dot { width: 8px; height: 8px; border-radius: 50%; background: #34c759; }
+  .keys-toggle-left span { font-size: 14px; color: #6e6e73; }
+  .keys-toggle-right { font-size: 13px; color: #007aff; cursor: pointer; }
+  .keys-body { display: none; padding: 16px 0; gap: 12px; flex-direction: column; }
+  .keys-body.open { display: flex; }
+  .key-row { display: flex; align-items: center; gap: 12px; }
+  .key-row label { font-size: 13px; color: #6e6e73; width: 140px; flex-shrink: 0; }
+  .key-row input { flex: 1; border: 1px solid #d2d2d7; border-radius: 10px; padding: 9px 14px; font-size: 13px; color: #1d1d1f; outline: none; font-family: inherit; background: #fafafa; transition: border-color 0.2s; }
+  .key-row input:focus { border-color: #007aff; background: #fff; }
+
+  /* 搜索主区 */
+  .search-section { max-width: 640px; margin: 0 auto; padding: 0 24px 80px; }
+  .search-box { position: relative; margin-bottom: 20px; }
+  .search-box input { width: 100%; border: 1.5px solid #d2d2d7; border-radius: 14px; padding: 16px 56px 16px 20px; font-size: 16px; color: #1d1d1f; outline: none; font-family: inherit; background: #fff; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .search-box input:focus { border-color: #007aff; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); }
+  .search-box input::placeholder { color: #aeaeb2; }
+  .search-icon { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: #aeaeb2; font-size: 18px; }
+
+  /* 快捷话题 */
+  .quick-label { font-size: 12px; color: #aeaeb2; margin-bottom: 10px; }
+  .quick-topics { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .quick-topic { padding: 7px 14px; border-radius: 20px; border: 1px solid #e5e5ea; background: #fff; color: #3a3a3c; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+  .quick-topic:hover { border-color: #007aff; color: #007aff; background: #f0f7ff; }
+
+  /* 选项行 */
+  .options-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .option-group label { display: block; font-size: 12px; color: #aeaeb2; margin-bottom: 6px; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; }
+  select { width: 100%; border: 1px solid #d2d2d7; border-radius: 10px; padding: 9px 12px; font-size: 13px; color: #1d1d1f; outline: none; font-family: inherit; background: #fff; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23aeaeb2' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; cursor: pointer; transition: border-color 0.2s; }
+  select:focus { border-color: #007aff; }
+
+  /* 按钮 */
+  .btn-search { width: 100%; padding: 15px; border-radius: 14px; border: none; cursor: pointer; font-size: 16px; font-weight: 600; font-family: inherit; background: #1d1d1f; color: #ffffff; transition: all 0.2s; letter-spacing: -0.2px; }
+  .btn-search:hover { background: #3a3a3c; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .btn-search:disabled { background: #d2d2d7; color: #fff; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-search:active { transform: translateY(0); }
+
+  /* 错误 */
+  .error { background: #fff2f2; border: 1px solid #ffcdd2; border-radius: 10px; padding: 12px 16px; color: #d32f2f; font-size: 13px; margin-top: 12px; display: none; }
+  .error.show { display: block; }
+
+  /* 进度 */
+  .progress-wrap { display: none; margin-top: 32px; }
+  .progress-wrap.show { display: block; }
+  .progress-steps { display: flex; flex-direction: column; gap: 2px; }
+  .step { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; transition: all 0.3s; }
+  .step.active { background: #f0f7ff; }
+  .step.done { background: #f0fff4; }
+  .step-icon { font-size: 16px; width: 20px; text-align: center; }
+  .step-text { font-size: 14px; color: #aeaeb2; flex: 1; }
+  .step.active .step-text { color: #007aff; font-weight: 500; }
+  .step.done .step-text { color: #34c759; }
+  .step-spinner { width: 14px; height: 14px; border: 2px solid #d2d2d7; border-top-color: #007aff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 结果区 */
+  .result-wrap { display: none; max-width: 640px; margin: 0 auto; padding: 0 24px 80px; }
+  .result-wrap.show { display: block; }
+  .result-eyebrow { font-size: 12px; font-weight: 500; color: #aeaeb2; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .result-headline { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; color: #1d1d1f; margin-bottom: 6px; line-height: 1.2; }
+  .result-meta { font-size: 13px; color: #aeaeb2; margin-bottom: 32px; }
+
+  /* 来源 */
+  .sources-label { font-size: 12px; font-weight: 500; color: #aeaeb2; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .sources-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 36px; }
+  .source-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border: 1px solid #f0f0f0; border-radius: 12px; transition: all 0.15s; background: #fff; }
+  .source-item:hover { border-color: #d2d2d7; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .source-num { font-size: 11px; font-weight: 600; color: #aeaeb2; width: 18px; flex-shrink: 0; padding-top: 2px; }
+  .source-info { flex: 1; min-width: 0; }
+  .source-info a { font-size: 14px; font-weight: 500; color: #1d1d1f; text-decoration: none; display: block; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-info a:hover { color: #007aff; }
+  .source-snippet { font-size: 12px; color: #aeaeb2; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* 报告 */
+  .report-card { border: 1px solid #f0f0f0; border-radius: 18px; overflow: hidden; }
+  .report-header { padding: 20px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
+  .report-header-left { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+  .copy-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid #d2d2d7; background: #fff; color: #3a3a3c; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 500; transition: all 0.15s; }
+  .copy-btn:hover { border-color: #007aff; color: #007aff; }
+  .report-body { padding: 28px 24px; }
+  .report-content { font-size: 15px; line-height: 1.8; color: #3a3a3c; }
+  .report-content h3 { font-size: 17px; font-weight: 700; color: #1d1d1f; margin: 24px 0 10px; letter-spacing: -0.3px; }
+  .report-content h4 { font-size: 15px; font-weight: 600; color: #1d1d1f; margin: 18px 0 8px; }
+  .report-content strong { color: #1d1d1f; font-weight: 600; }
+  .report-content ul { padding-left: 20px; margin: 10px 0; }
+  .report-content li { margin: 7px 0; }
+  .report-content p { margin: 10px 0; }
+  .report-content hr { border: none; border-top: 1px solid #f0f0f0; margin: 20px 0; }
+
+  /* 分割线 */
+  .divider { height: 1px; background: #f0f0f0; max-width: 640px; margin: 0 auto 36px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">AI 资讯 Agent <span>/ News Intelligence</span></div>
+  <div class="nav-tags">
+    <span class="nav-tag">Tavily Search</span>
+    <span class="nav-tag">DeepSeek AI</span>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">AI-Powered Research</div>
+  <h1>搜索，<em>交给 Agent。</em></h1>
+  <p>输入任意话题，Agent 自动搜索全网资讯，<br>AI 深度分析，生成结构化报告。</p>
+</div>
+
+<div class="keys-section">
+  <div class="keys-toggle" onclick="toggleKeys()">
+    <div class="keys-toggle-left">
+      <div class="dot" id="keyDot"></div>
+      <span id="keyStatus">API 配置</span>
+    </div>
+    <span class="keys-toggle-right" id="keyToggleText">展开配置</span>
+  </div>
+  <div class="keys-body" id="keysBody">
+    <div class="key-row">
+      <label>DeepSeek API Key</label>
+      <input type="password" id="dsKey" placeholder="sk-xxxxxxxxxxxxxxxx" oninput="updateKeyStatus()" />
+    </div>
+    <div class="key-row">
+      <label>Tavily API Key</label>
+      <input type="password" id="tvKey" placeholder="tvly-xxxxxxxxxxxxxxxx" oninput="updateKeyStatus()" />
+    </div>
+  </div>
+</div>
+
+<div class="search-section">
+  <div class="search-box">
+    <input type="text" id="topicInput" placeholder="输入任何话题，例如：AI Agent 最新进展..." onkeydown="if(event.key==='Enter')runAgent()" />
+    <span class="search-icon">⌕</span>
+  </div>
+
+  <div class="quick-label">热门话题</div>
+  <div class="quick-topics">
+    <button class="quick-topic" onclick="setTopic(this)">AI Agent 最新进展</button>
+    <button class="quick-topic" onclick="setTopic(this)">2025年互联网就业市场</button>
+    <button class="quick-topic" onclick="setTopic(this)">产品经理实习招聘趋势</button>
+    <button class="quick-topic" onclick="setTopic(this)">国内大模型竞争格局</button>
+    <button class="quick-topic" onclick="setTopic(this)">应届生求职最新动态</button>
+    <button class="quick-topic" onclick="setTopic(this)">数据分析师技能要求变化</button>
+  </div>
+
+  <div class="options-row">
+    <div class="option-group">
+      <label>搜索深度</label>
+      <select id="searchDepth">
+        <option value="basic">快速（3条来源）</option>
+        <option value="advanced" selected>深度（5条来源）</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>输出语言</label>
+      <select id="outputLang">
+        <option value="中文" selected>中文</option>
+        <option value="英文">英文</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>报告风格</label>
+      <select id="reportStyle">
+        <option value="简洁摘要" selected>简洁摘要</option>
+        <option value="深度分析">深度分析</option>
+        <option value="要点清单">要点清单</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn-search" id="searchBtn" onclick="runAgent()">开始搜索</button>
+  <div class="error" id="errBox"></div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-steps">
+      <div class="step" id="step1"><span class="step-icon">🔍</span><span class="step-text">正在搜索全网相关资讯</span></div>
+      <div class="step" id="step2"><span class="step-icon">📥</span><span class="step-text">获取搜索结果</span></div>
+      <div class="step" id="step3"><span class="step-icon">🧠</span><span class="step-text">AI 分析整理中</span></div>
+      <div class="step" id="step4"><span class="step-icon">📝</span><span class="step-text">生成资讯报告</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="result-wrap" id="resultWrap">
+  <div class="divider"></div>
+  <div class="result-eyebrow">Research Report</div>
+  <div class="result-headline" id="resultTitle"></div>
+  <div class="result-meta" id="resultMeta"></div>
+
+  <div class="sources-label">参考来源</div>
+  <div class="sources-grid" id="sourcesGrid"></div>
+
+  <div class="report-card">
+    <div class="report-header">
+      <div class="report-header-left">AI 分析报告</div>
+      <button class="copy-btn" onclick="copyReport()">复制报告</button>
+    </div>
+    <div class="report-body">
+      <div class="report-content" id="summaryContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let keysOpen = false;
+
+function toggleKeys() {
+  keysOpen = !keysOpen;
+  document.getElementById('keysBody').className = keysOpen ? 'keys-body open' : 'keys-body';
+  document.getElementById('keyToggleText').textContent = keysOpen ? '收起' : '展开配置';
+}
+
+function updateKeyStatus() {
+  const ds = document.getElementById('dsKey').value.trim();
+  const tv = document.getElementById('tvKey').value.trim();
+  const dot = document.getElementById('keyDot');
+  const status = document.getElementById('keyStatus');
+  if (ds && tv) {
+    dot.style.background = '#34c759';
+    status.textContent = 'API 已配置';
+  } else {
+    dot.style.background = '#ff9500';
+    status.textContent = 'API 未完整配置';
+  }
+}
+
+function setTopic(btn) {
+  document.getElementById('topicInput').value = btn.textContent.trim();
+  document.getElementById('topicInput').focus();
+}
+
+function setStep(n, state) {
+  const el = document.getElementById('step' + n);
+  const icons = ['🔍','📥','🧠','📝'];
+  el.className = 'step ' + state;
+  const icon = el.querySelector('.step-icon');
+  if (icon) icon.textContent = state === 'done' ? '✓' : icons[n-1];
+  const sp = el.querySelector('.step-spinner');
+  if (sp) sp.remove();
+  if (state === 'active') {
+    el.insertAdjacentHTML('beforeend', '<div class="step-spinner"></div>');
+  }
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)(\n<li>[\s\S]*?<\/li>)*/g, m => `<ul>${m}</ul>`)
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+}
+
+async function runAgent() {
+  const dsKey = document.getElementById('dsKey').value.trim();
+  const tvKey = document.getElementById('tvKey').value.trim();
+  const topic = document.getElementById('topicInput').value.trim();
+  const depth = document.getElementById('searchDepth').value;
+  const lang = document.getElementById('outputLang').value;
+  const style = document.getElementById('reportStyle').value;
+  const errBox = document.getElementById('errBox');
+
+  errBox.className = 'error';
+  if (!dsKey) { errBox.textContent = '请填写 DeepSeek API Key'; errBox.className = 'error show'; if(!keysOpen) toggleKeys(); return; }
+  if (!tvKey) { errBox.textContent = '请填写 Tavily API Key'; errBox.className = 'error show'; if(!keysOpen) toggleKeys(); return; }
+  if (!topic) { errBox.textContent = '请输入搜索话题'; errBox.className = 'error show'; return; }
+
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('progressWrap').className = 'progress-wrap show';
+  document.getElementById('resultWrap').className = 'result-wrap';
+  ['step1','step2','step3','step4'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.className = 'step';
+    const icon = el.querySelector('.step-icon');
+    const icons = ['🔍','📥','🧠','📝'];
+    if (icon) icon.textContent = icons[i];
+    const sp = el.querySelector('.step-spinner');
+    if (sp) sp.remove();
+  });
+
+  try {
+    setStep(1, 'active');
+    await sleep(400);
+
+    const maxResults = depth === 'advanced' ? 5 : 3;
+    const searchResp = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: tvKey,
+        query: topic,
+        search_depth: depth,
+        max_results: maxResults,
+        include_answer: true,
+        include_raw_content: false
+      })
+    });
+
+    if (!searchResp.ok) {
+      const e = await searchResp.json();
+      throw new Error('Tavily 搜索失败：' + (e.detail || e.message || searchResp.status));
+    }
+
+    setStep(1, 'done'); setStep(2, 'active');
+    await sleep(300);
+
+    const searchData = await searchResp.json();
+    const results = searchData.results || [];
+    const tavilyAnswer = searchData.answer || '';
+    if (results.length === 0) throw new Error('未找到相关结果，请换个话题试试');
+
+    setStep(2, 'done'); setStep(3, 'active');
+
+    document.getElementById('sourcesGrid').innerHTML = results.map((r, i) => `
+      <div class="source-item">
+        <div class="source-num">${i+1}</div>
+        <div class="source-info">
+          <a href="${r.url}" target="_blank" rel="noopener">${r.title || '查看来源'}</a>
+          <div class="source-snippet">${r.content ? r.content.slice(0, 120) + '...' : ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    const sourcesText = results.map((r, i) =>
+      `来源${i+1}：${r.title}\n链接：${r.url}\n内容：${r.content ? r.content.slice(0, 500) : '无'}`
+    ).join('\n\n');
+
+    const prompt = `你是专业资讯分析师。根据以下搜索结果，用${lang}生成「${topic}」的${style}报告。
+
+搜索结果：
+${sourcesText}
+${tavilyAnswer ? `\n搜索摘要：${tavilyAnswer}` : ''}
+
+要求：
+1. 开头1-2句说明核心现状
+2. 整理3-5个关键要点，有具体内容支撑
+3. 分析趋势和影响
+4. 结尾给1-2条实用建议
+5. 风格：${style}，简洁有力，不编造`;
+
+    setStep(3, 'done'); setStep(4, 'active');
+
+    const aiResp = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dsKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        temperature: 0.6
+      })
+    });
+
+    if (!aiResp.ok) {
+      const e = await aiResp.json();
+      throw new Error('DeepSeek 失败：' + (e.error?.message || aiResp.status));
+    }
+
+    const report = (await aiResp.json()).choices[0].message.content;
+    setStep(4, 'done');
+
+    const now = new Date().toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    document.getElementById('resultTitle').textContent = topic;
+    document.getElementById('resultMeta').textContent = `${results.length} 个来源 · ${now}`;
+    document.getElementById('summaryContent').innerHTML = `<p>${renderMarkdown(report)}</p>`;
+    document.getElementById('resultWrap').className = 'result-wrap show';
+    document.getElementById('resultWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch(e) {
+    errBox.textContent = e.message;
+    errBox.className = 'error show';
+  } finally {
+    document.getElementById('searchBtn').disabled = false;
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function copyReport() {
+  const text = document.getElementById('summaryContent').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '已复制';
+    setTimeout(() => btn.textContent = '复制报告', 2000);
+  });
+}
+</script>
+</body>
+</html>
